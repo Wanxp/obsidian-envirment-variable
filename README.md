@@ -91,6 +91,8 @@ If you have multiple URLs, you can also do:
 }
 ```
 
+git@github.com:nothingislost/obsidian-workspaces-plus.git
+
 ## API Documentation
 
 See https://github.com/obsidianmd/obsidian-api
