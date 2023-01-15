@@ -1,6 +1,4 @@
 import {App, FuzzySuggestModal} from "obsidian";
-import {EnvironmentSettingHolder} from "../module/EnvironmentSettingHolder";
-import {GlobalEnvironmentHolder} from "../module/GlobalEnvironmentHolder";
 import {EnvironmentHolder} from "../module/EnvironmentHolder";
 import EnvironmentVariablePlugin from "../main";
 
@@ -10,7 +8,7 @@ export class EnvironmentChosenModal extends FuzzySuggestModal<string> {
 	private envHolder:EnvironmentHolder;
 
 	private plugin:EnvironmentVariablePlugin;
-	constructor(app:App, plugin, envHolder:EnvironmentHolder) {
+	constructor(app:App, plugin:EnvironmentVariablePlugin, envHolder:EnvironmentHolder) {
 		super(app);
 		this.plugin = plugin;
 		this.envHolder = envHolder;
@@ -58,26 +56,4 @@ export class EnvironmentChosenModal extends FuzzySuggestModal<string> {
 			this.setInstructions(instructions);
 	}
 
-	setupScope(): void {
-		this.scope.register([], "Escape", evt => this.onEscape(evt));
-		// this.scope.register([], "Enter", evt => this.useSelectedItem(evt));
-		this.scope.register(["Ctrl"], "Enter", evt => this.showEditModal(evt));
-		// this.scope.register(["Shift"], "Enter", evt => this.useSelectedItem(evt));
-		// this.scope.register(["Alt"], "Enter", evt => this.useSelectedItem(evt));
-		// this.scope.register([], "ArrowUp", evt => {
-		// 	if (!evt.isComposing) return this..setSelectedItem(this.chooser.selectedItem - 1, true), false;
-		// });
-		// this.scope.register([], "ArrowDown", evt => {
-		// 	if (!evt.isComposing) return this.chooser.setSelectedItem(this.chooser.selectedItem + 1, true), false;
-		// });
-	}
-
-
-	private onEscape(evt: KeyboardEvent) {
-		this.close();
-	}
-
-	private showEditModal(evt: KeyboardEvent) {
-
-	}
 }

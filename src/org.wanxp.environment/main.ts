@@ -1,11 +1,18 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, setIcon, Setting} from 'obsidian';
+import {
+	MarkdownPostProcessorContext,
+	Plugin,
+} from 'obsidian';
 import {EnvironmentSettingHolder} from "./module/EnvironmentSettingHolder";
 import {EnvLevelEnum} from "./dict/EnvLevelEnum";
 import {EnvironmentHolder} from "./module/EnvironmentHolder";
 import {GlobalEnvironmentHolder} from "./module/GlobalEnvironmentHolder";
-import {EnvironmentChosenModal} from "./component/EnvironmentChosenModal";
 import {EnvironmentSetting} from "./model/EnvironmentSetting";
 import {DEFAULT_SETTING} from "./constant/DefaultSetting";
+import {EnvironmentChosenComponent} from "./component/EnvironmentChosenComponent";
+import {StringUtil} from "./util/StringUtil";
+export const COUNTER_VIEW_TYPE = "test-viewwwww";
+
+export const REX = /{{(\S+)}}/
 
 export default class EnvironmentVariablePlugin extends Plugin {
 
@@ -19,29 +26,36 @@ export default class EnvironmentVariablePlugin extends Plugin {
 		for (const envHolder of this.envHolders) {
 			await this.createStatusBar(envHolder);
 		}
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
 
+		this.registerMarkdownPostProcessor((element, _context) => {
+			this.replaceStrByEnv(element, _context);
+		});
+		// This adds a settings tab so the user can configure various aspects of the plugin
+	}
+
+	async activateView() {
+		this.app.workspace.detachLeavesOfType(COUNTER_VIEW_TYPE);
+
+		await this.app.workspace.getRightLeaf(true).setViewState({
+			type: COUNTER_VIEW_TYPE,
+			active: true,
+		});
+
+		this.app.workspace.revealLeaf(
+			this.app.workspace.getLeavesOfType(COUNTER_VIEW_TYPE)[0]
+		);
 	}
 
 	async createStatusBar(envHolder:EnvironmentHolder) {
-		const envLevel:EnvLevelEnum = envHolder.getEnvLevel();
 		const statusBarItem = this.addStatusBarItem();
-		const icon = statusBarItem.createSpan("status-bar-item-segment icon");
-		envLevel == EnvLevelEnum.GLOBAL ? setIcon(icon, "gear") : setIcon(icon, "gear"); // inject svg icon
-
-		statusBarItem.createSpan({
-			cls: "status-bar-item-segment name",
-			text: envHolder.getActiveEnv(),
-			prepend: false,
-		});
-		statusBarItem.addEventListener("click", evt => this.onStatusBarClick(evt, envHolder));
-
+		new EnvironmentChosenComponent(statusBarItem, envHolder, this);
 	}
 
 	onunload() {
 
 	}
+
+
 
 	async loadSettings() {
 		this.setting = Object.assign({}, DEFAULT_SETTING, await this.loadData());
@@ -50,56 +64,37 @@ export default class EnvironmentVariablePlugin extends Plugin {
 
 	async activeEnv(env: string, level:EnvLevelEnum) {
 		const environmentHolder = this.envHolders.find(h => h.getEnvLevel() == level);
-		await environmentHolder.saveEnv(env);
+		if (environmentHolder) {
+			await environmentHolder.activeEnv(env);
+		}
 		// await environmentHolder.updateEnvView(env, this.app.)
 	}
 
-	private onStatusBarClick(evt: MouseEvent, envHolder: EnvironmentHolder) {
-		new EnvironmentChosenModal(this.app, this, envHolder).open();
+
+	private replaceStrByEnv(element: HTMLElement, _context: MarkdownPostProcessorContext) {
+		Array.from(element.getElementsByTagName("code"))
+			.forEach((codeBlock: HTMLElement) => {
+				this.envHolders.forEach(holder => {
+					this.replaceChildrenText(codeBlock, holder.getActiveEnvData());
+				})
+			});
+	}
+
+	private replaceChildrenText(codeBlock:ChildNode , data:Object) {
+		if (codeBlock.childNodes && codeBlock.childNodes.length > 0) {
+			codeBlock.childNodes.forEach(codeChild => {
+				this.replaceChildrenText(codeChild, data);
+			})
+		}else {
+			 if(codeBlock.textContent && REX.test(codeBlock.textContent)) {
+				 const result:string = StringUtil.replacePlaceHolder(codeBlock.textContent, data);
+				 console.log("cccc" + codeBlock.nodeValue);
+				 codeBlock.replaceWith(result);
+			 }
+		}
+
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: EnvironmentVariablePlugin;
-
-	constructor(app: App, plugin: EnvironmentVariablePlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
-}

@@ -2,7 +2,6 @@ import {App} from "obsidian";
 import {EnvironmentSettingHolder} from "./EnvironmentSettingHolder";
 import {EnvironmentHolder} from "./EnvironmentHolder";
 import {EnvironmentSetting} from "../model/EnvironmentSetting";
-import {ObjectUtil} from "../ObjectUtil";
 import {EnvLevelEnum} from "../dict/EnvLevelEnum";
 
 export class GlobalEnvironmentHolder implements EnvironmentHolder{
@@ -11,22 +10,28 @@ export class GlobalEnvironmentHolder implements EnvironmentHolder{
 
 	private envSettingHolder:EnvironmentSettingHolder;
 
-	private
+	private activeEnvData:Object;
+
+	private activeEnvValue:string;
+
 
 	constructor(app:App, envSettingHolder:EnvironmentSettingHolder) {
 		this.app = app;
 		this.envSettingHolder = envSettingHolder;
+		this.activeEnvData = {
+			"host": "https://127.0.0.1:5000"
+		}
 	}
 
-	getEnvItemData(env: string): Map<string, string> {
+	getEnvItemDataObject(env: string): object {
 		const setting:EnvironmentSetting = this.envSettingHolder.getSetting();
 		let envData:Object = {};
 		if (setting.envContent) {
 			envData = JSON.parse(setting.envContent);
 		}
-		const data:Object = envData[env];
-		return ObjectUtil.toMap(data);
+		return envData;
 	}
+
 
 	getEnvItems(): string[] {
 		const setting:EnvironmentSetting = this.envSettingHolder.getSetting();
@@ -37,9 +42,6 @@ export class GlobalEnvironmentHolder implements EnvironmentHolder{
 		return Object.keys(envData);
 	}
 
-	async saveEnv(env: string) {
-
-	}
 
 	getEnvLevel(): EnvLevelEnum {
 		return EnvLevelEnum.GLOBAL;
@@ -48,6 +50,15 @@ export class GlobalEnvironmentHolder implements EnvironmentHolder{
 	getActiveEnv(): string {
 		const setting:EnvironmentSetting = this.envSettingHolder.getSetting();
 		return setting.envActive;
+	}
+
+	activeEnv(env: string) {
+		this.activeEnvValue = env;
+	}
+
+
+	getActiveEnvData(): Object {
+		return this.activeEnvData;
 	}
 
 

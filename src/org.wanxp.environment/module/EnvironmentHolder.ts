@@ -3,12 +3,13 @@ import {EnvLevelEnum} from "../dict/EnvLevelEnum";
 export interface EnvironmentHolder {
 	getEnvItems():string[];
 
-	getEnvItemData(env:string):Map<string, string>;
+	getEnvItemDataObject(env:string):object;
 
-	saveEnv(env:string);
+	activeEnv(env:string):void;
 
 	getEnvLevel():EnvLevelEnum;
 
 	getActiveEnv():string;
 
+	getActiveEnvData(): Object;
 }
