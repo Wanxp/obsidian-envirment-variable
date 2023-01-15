@@ -20,6 +20,8 @@ export default class EnvironmentVariablePlugin extends Plugin {
 	settingsHolder: EnvironmentSettingHolder;
 	envHolders:EnvironmentHolder[];
 
+	chosenComponent:EnvironmentChosenComponent;
+
 	async onload() {
 		await this.loadSettings();
 		this.envHolders = [new GlobalEnvironmentHolder(app, this.settingsHolder)]
@@ -48,11 +50,10 @@ export default class EnvironmentVariablePlugin extends Plugin {
 
 	async createStatusBar(envHolder:EnvironmentHolder) {
 		const statusBarItem = this.addStatusBarItem();
-		new EnvironmentChosenComponent(statusBarItem, envHolder, this);
+		this.chosenComponent = new EnvironmentChosenComponent(statusBarItem, envHolder, this);
 	}
 
 	onunload() {
-
 	}
 
 
@@ -67,6 +68,7 @@ export default class EnvironmentVariablePlugin extends Plugin {
 		if (environmentHolder) {
 			await environmentHolder.activeEnv(env);
 		}
+		this.app.workspace.getLayout()
 		// await environmentHolder.updateEnvView(env, this.app.)
 	}
 
@@ -80,19 +82,23 @@ export default class EnvironmentVariablePlugin extends Plugin {
 			});
 	}
 
-	private replaceChildrenText(codeBlock:ChildNode , data:Object) {
+	private replaceChildrenText(codeBlock:ChildNode , data:object) {
 		if (codeBlock.childNodes && codeBlock.childNodes.length > 0) {
 			codeBlock.childNodes.forEach(codeChild => {
 				this.replaceChildrenText(codeChild, data);
 			})
 		}else {
 			 if(codeBlock.textContent && REX.test(codeBlock.textContent)) {
-				 const result:string = StringUtil.replacePlaceHolder(codeBlock.textContent, data);
-				 console.log("cccc" + codeBlock.nodeValue);
+				 const result:string = StringUtil.replacePlaceHolder(codeBlock.textContent, data,  {
+					 error: false});
 				 codeBlock.replaceWith(result);
 			 }
 		}
 
+	}
+
+	async reloadStatusBar() {
+		await this.chosenComponent.reload();
 	}
 }
 

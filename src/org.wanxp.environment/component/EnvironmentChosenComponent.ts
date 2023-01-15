@@ -5,7 +5,6 @@ import {EnvironmentConfigModal} from "./EnvironmentConfigModal";
 
 export class EnvironmentChosenComponent {
 
-
 	private containerEl:HTMLElement;
 
 	private dropdown:DropdownComponent;
@@ -45,7 +44,13 @@ export class EnvironmentChosenComponent {
 		// new EnvironmentConfigModal2(this.plugin.app, this.plugin).onOpen();
 	}
 
-	private async onChangeEnv(env: string) {
-		this.envHolder.activeEnv(env);
+	private async onChangeEnv(env: string):Promise<void> {
+		await this.envHolder.activeEnv(env);
+		this.plugin.app.vault.getAllLoadedFiles().forEach( file => (file))
+	}
+
+	public async reload():Promise<void> {
+		this.containerEl.empty();
+		this.init();
 	}
 }

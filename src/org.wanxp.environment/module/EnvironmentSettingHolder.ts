@@ -1,6 +1,5 @@
 import {App} from "obsidian";
 import {EnvironmentSetting} from "../model/EnvironmentSetting";
-import {DEFAULT_SETTING} from "../constant/DefaultSetting";
 import EnvironmentVariablePlugin from "../main";
 
 export class EnvironmentSettingHolder {
@@ -19,8 +18,9 @@ export class EnvironmentSettingHolder {
 		this.setting = plugin.setting;
 	}
 
-	async saveSettings() {
-		await this.plugin.saveData(this.setting);
+	async saveSettings(setting:EnvironmentSetting) {
+		this.setting = setting;
+		await this.plugin.saveData(setting);
 	}
 
 	getSetting():EnvironmentSetting {

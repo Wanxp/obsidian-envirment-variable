@@ -10,7 +10,9 @@ export class GlobalEnvironmentHolder implements EnvironmentHolder{
 
 	private envSettingHolder:EnvironmentSettingHolder;
 
-	private activeEnvData:Object;
+	private envAllData:object;
+
+	private activeEnvData:object;
 
 	private activeEnvValue:string;
 
@@ -18,18 +20,31 @@ export class GlobalEnvironmentHolder implements EnvironmentHolder{
 	constructor(app:App, envSettingHolder:EnvironmentSettingHolder) {
 		this.app = app;
 		this.envSettingHolder = envSettingHolder;
-		this.activeEnvData = {
-			"host": "https://127.0.0.1:5000"
+		this.activeEnvValue = this.getSettingActiveEnvValue(envSettingHolder);
+		this.activeEnvData = this.getEnvDataByEnv(this.activeEnvValue);
+		this.envAllData = this.getEnvAllData(envSettingHolder);
+
+	}
+
+
+
+	private getEnvDataByEnv(activeEnvValue:string):object {
+		const setting:EnvironmentSetting = this.envSettingHolder.getSetting();
+		if(activeEnvValue && setting.envContent) {
+			const envData:object = JSON.parse(setting.envContent);
+			if (envData.hasOwnProperty(activeEnvValue)) {
+				// @ts-ignore
+				return envData[activeEnvValue];
+			}else {
+				return {};
+			}
+		}else {
+			return {};
 		}
 	}
 
 	getEnvItemDataObject(env: string): object {
-		const setting:EnvironmentSetting = this.envSettingHolder.getSetting();
-		let envData:Object = {};
-		if (setting.envContent) {
-			envData = JSON.parse(setting.envContent);
-		}
-		return envData;
+		return this.getEnvDataByEnv(env);
 	}
 
 
@@ -48,20 +63,45 @@ export class GlobalEnvironmentHolder implements EnvironmentHolder{
 	}
 
 	getActiveEnv(): string {
-		const setting:EnvironmentSetting = this.envSettingHolder.getSetting();
-		return setting.envActive;
+		return this.activeEnvValue;
 	}
 
-	activeEnv(env: string) {
+	async activeEnv(env: string) {
 		this.activeEnvValue = env;
+		const setting:EnvironmentSetting = this.envSettingHolder.getSetting();
+		setting.envActive = env;
+		this.activeEnvData = this.getEnvItemDataObject(env);
+		await this.envSettingHolder.saveSettings(setting);
 	}
 
-
-	getActiveEnvData(): Object {
+	getActiveEnvData(): object {
 		return this.activeEnvData;
 	}
 
 
+	private getSettingActiveEnvValue(envSettingHolder: EnvironmentSettingHolder):string {
+		return envSettingHolder.getSetting().envActive;
+	}
 
+	private getEnvAllData(envSettingHolder: EnvironmentSettingHolder) {
+		if(envSettingHolder.getSetting().envContent) {
+			return JSON.parse(envSettingHolder.getSetting().envContent);
+		}
+		return {};
+	}
 
+	async saveAllEnv(envAllData: object): Promise<void> {
+		const setting:EnvironmentSetting = this.envSettingHolder.getSetting();
+		this.envAllData = envAllData;
+		setting.envContent = JSON.stringify(envAllData);
+		await this.envSettingHolder.saveSettings(setting);
+	}
+
+	async saveEnv(env: string, envData: object): Promise<void> {
+		const setting:EnvironmentSetting = this.envSettingHolder.getSetting();
+		// @ts-ignore
+		this.envAllData[env] = envData;
+		setting.envContent = JSON.stringify(this.envAllData);
+		await this.envSettingHolder.saveSettings(setting);
+	}
 }

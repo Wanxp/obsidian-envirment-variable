@@ -6,6 +6,10 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
-.obsidian-environment-status-bar.dropdown {
-	height: 5px;
+
+
+.obsidian-environment-env-config-button  {
+	margin-top: 5px;
+	margin-right: 10px;
+	float:right;
 }

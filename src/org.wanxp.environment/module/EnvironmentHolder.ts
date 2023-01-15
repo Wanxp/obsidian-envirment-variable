@@ -10,6 +10,9 @@ export interface EnvironmentHolder {
 	getEnvLevel():EnvLevelEnum;
 
 	getActiveEnv():string;
+	saveEnv(env:string, envData:object):void;
+
+	saveAllEnv(envData:object):void;
 
 	getActiveEnvData(): Object;
 }
