@@ -4,6 +4,7 @@ import EnvironmentVariablePlugin from "../main";
 import {EnvLevelEnum} from "../dict/EnvLevelEnum";
 import {StringUtil} from "../util/StringUtil";
 
+
 export class EnvironmentConfigModal extends Modal {
 
 	private plugin:EnvironmentVariablePlugin;
@@ -16,6 +17,7 @@ export class EnvironmentConfigModal extends Modal {
 
 	private envAddText:string;
 	private envAddTextEnvData:string;
+	private envAddTextEnvErrorData: string;
 
 
 
@@ -67,7 +69,7 @@ export class EnvironmentConfigModal extends Modal {
 		this.showButton(contentEl.createDiv({cls:  "obsidian-environment-env-config-button"}))
 	}
 
-	private showEnvConfig(div: HTMLDivElement, addEnv:boolean) {
+	private showEnvConfig(div: HTMLDivElement, addEnv:boolean, envValueSelection?:string) {
 		div.empty();
 		const envConfigDiv:HTMLDivElement = div.createDiv({cls: "obsidian-environment-variable-env-config"});
 		const envDataConfigDiv:HTMLDivElement = div.createDiv({cls: "obsidian-environment-variable-env-config"});
@@ -83,6 +85,10 @@ export class EnvironmentConfigModal extends Modal {
 				.addExtraButton((extraButton) => {
 					extraButton.setIcon('check-square')
 						.onClick(() => {
+							if (!this.envAddText) {
+								new Notice('请填写环境名称');
+								return;
+							}
 							const addText = this.envAddText;
 							const envAddTextEnvData = this.envAddTextEnvData;
 							this.envAddText = '';
@@ -102,7 +108,7 @@ export class EnvironmentConfigModal extends Modal {
 				})
 		}else {
 			// @ts-ignore
-			dropdownValue = this.envCache.get(this.envLevel).keys() ? this.envCache.get(this.envLevel).keys().next().value : '';
+			dropdownValue = envValueSelection ? envValueSelection : this.envCache.get(this.envLevel).keys() ? this.envCache.get(this.envLevel).keys().next().value : '';
 			new Setting(envConfigDiv)
 				.setName("环境名称")
 				.addDropdown((dropdown) => {
@@ -115,7 +121,7 @@ export class EnvironmentConfigModal extends Modal {
 					}
 					dropdown.onChange((value) => {
 						dropdownValue = value;
-						this.showEnvDataConfig(envDataConfigDiv, value);
+						this.showEnvDataConfig(envDataConfigDiv, value, addEnv);
 					})
 				})
 				.addExtraButton((extraButton) => {
@@ -133,20 +139,25 @@ export class EnvironmentConfigModal extends Modal {
 						.setTooltip("删除环境")
 				})
 		}
-		this.showEnvDataConfig(envDataConfigDiv, dropdownValue);
+		this.showEnvDataConfig(envDataConfigDiv, dropdownValue, addEnv);
 	}
 
-	private showEnvDataConfig(div: HTMLDivElement, env:string) {
+	private showEnvDataConfig(div: HTMLDivElement, env:string, adding:boolean) {
+		if (this.envAddTextEnvErrorData) {
+			new Notice('JSON格式错误,请检查你录入的参数内容是否符合JSON格式');
+			return;
+		}
 		div.empty();
 		new Setting(div).setName("参数内容(JSON)")
 		.addExtraButton((extraButton) => {
 			extraButton.setIcon('paintbrush')
 				.onClick(() => {
-					this.showEnvDataConfig(div, env);
+					this.showEnvDataConfig(div, env, adding);
 				})
 				.setTooltip("优化JSON显示")
 		})
-		const envData:Map<string, object> | undefined =  this.envCache.get(this.envLevel);
+		// @ts-ignore
+		const envData:Map<string, object>  =  this.envCache.get(this.envLevel);
 		let textValue:string;
 		if(this.envAddText) {
 			textValue = JSON.stringify(JSON.parse(this.envAddTextEnvData), null, 2);
@@ -157,11 +168,16 @@ export class EnvironmentConfigModal extends Modal {
 		const textarea = new TextAreaComponent(div);
 		textarea.setValue(textValue);
 		textarea.onChange((textareaValue) => {
-			if (envData && StringUtil.isJson(textareaValue)) {
-				if(this.envAddText) {
-					this.envAddTextEnvData = textareaValue;
+			if(textareaValue) {
+				if (StringUtil.isJson(textareaValue)) {
+					if(adding) {
+						this.envAddTextEnvData = textareaValue;
+					}else {
+						this.setEnv(env, textareaValue);
+					}
+					this.envAddTextEnvErrorData = '';
 				}else {
-					envData.set(env, JSON.parse(textareaValue));
+					this.envAddTextEnvErrorData = textareaValue;
 				}
 			}
 		});
@@ -197,8 +213,8 @@ export class EnvironmentConfigModal extends Modal {
 			this.showEnvConfig(div, false);
 			return;
 		}
-		if(!this.addEnv(envAddText, envAddTextEnvData)) {
-			this.showEnvConfig(div, false);
+		if(this.addEnv(envAddText, envAddTextEnvData)) {
+			this.showEnvConfig(div, false, envAddText);
 		}
 	}
 
@@ -215,17 +231,22 @@ export class EnvironmentConfigModal extends Modal {
 			.setButtonText("保存")
 			.onClick(async () => {
 				await this.saveEnvData();
-				this.close();
+
 			})
 			.setClass("obsidian-environment-env-config-button");
 
 	}
 
 	private async saveEnvData() {
+		if (this.envAddTextEnvErrorData) {
+			new Notice('JSON格式错误,请检查你录入的参数内容是否符合JSON格式');
+			return;
+		}
 		if(this.envAddText) {
 			this.addEnv(this.envAddText, this.envAddTextEnvData);
 			this.envAddText = '';
 			this.envAddTextEnvData = '';
+			this.envAddTextEnvErrorData = '';
 		}
 		for (const envHolder of this.envHolders) {
 			let map:Map<string, object> | undefined = this.envCache.get(envHolder.getEnvLevel());
@@ -235,6 +256,7 @@ export class EnvironmentConfigModal extends Modal {
 			}
 			await envHolder.saveAllEnv(result);
 		}
+		this.close();
 	}
 
 	private addEnv(envAddText: string, envAddTextEnvData: string):boolean {
@@ -247,11 +269,33 @@ export class EnvironmentConfigModal extends Modal {
 			new Notice('已经存在')
 			return false;
 		}
-		if (envAddTextEnvData) {
-			map.set(envAddText, JSON.parse(envAddTextEnvData));
-		}else {
-			map.set(envAddText, {});
+		let envData:string = envAddTextEnvData;
+		if (!envData) {
+			envData = '{}';
 		}
+		if (!StringUtil.isJson(envData)) {
+			new Notice('JSON格式错误,请检查你录入的参数内容是否符合JSON格式')
+			return false;
+		}
+		map.set(envAddText, JSON.parse(envData));
+		return true;
+	}
+
+	private setEnv(env: string, envDataValue: string):boolean {
+		let map:Map<string, object> | undefined = this.envCache.get(this.envLevel);
+		if (!map) {
+			map = new Map<string, object>();
+			this.envCache.set(this.envLevel, map);
+		}
+		let envData:string = envDataValue;
+		if (!envData) {
+			envData = '{}';
+		}
+		if (!StringUtil.isJson(envData)) {
+			new Notice('JSON格式错误,请检查你录入的参数内容是否符合JSON格式')
+			return false;
+		}
+		map.set(env, JSON.parse(envData));
 		return true;
 	}
 

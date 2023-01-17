@@ -1,4 +1,4 @@
-# Obsidian Douban Plugin
+# Obsidian Environment Variable
 
 <p align="center">    
     <a href="https://github.com/Wanxp/obsidian-douban/releases/latest">    
@@ -19,7 +19,6 @@
    </a>    
 </p>    
 Provide changing the display content in markdown preview mode by parameters(or variable), and provide  multi-environment parameterization in combination with obsidian-execute-code
-![background](./doc/background.png)
 
 ---  
 If you want some features or have any questions about this plugin, create issues or join the development is welcome.      
